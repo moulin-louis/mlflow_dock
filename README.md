@@ -21,8 +21,8 @@ A FastAPI-based webhook receiver for MLflow that automatically builds and pushes
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/mlflow-docker-webhooks.git
-cd mlflow-docker-webhooks
+git clone https://github.com/yourusername/mlflow-dock.git
+cd mlflow-dock
 ```
 
 2. Install dependencies using uv (recommended) or pip:

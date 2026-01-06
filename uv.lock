@@ -544,7 +544,7 @@ wheels = [
 ]
 
 [[package]]
-name = "mlflow-docker-webhooks"
+name = "mlflow-dock"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
