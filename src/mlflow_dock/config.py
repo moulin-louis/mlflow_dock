@@ -11,6 +11,7 @@ class Settings:
     webhook_secret: str
     docker_registry: str
     docker_username: str
+    docker_password: str
     max_timestamp_age: int
     port: int
 
@@ -27,6 +28,7 @@ class Settings:
             webhook_secret=os.environ["WEBHOOK_SECRET"],
             docker_registry=os.getenv("DOCKER_REGISTRY", "docker.io"),
             docker_username=os.environ["DOCKER_USERNAME"],
+            docker_password=os.environ["DOCKER_PASSWORD"],
             max_timestamp_age=int(os.getenv("MAX_TIMESTAMP_AGE", "300")),
             port=int(os.getenv("PORT", "8000")),
         )

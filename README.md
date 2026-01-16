@@ -20,6 +20,7 @@ Create a `.env` file with the following required variables:
 # Required
 WEBHOOK_SECRET=your-webhook-secret-here
 DOCKER_USERNAME=your-docker-username
+DOCKER_PASSWORD=your-docker-password-or-token
 
 # Optional
 DOCKER_REGISTRY=docker.io
@@ -30,6 +31,14 @@ PORT=8000
 AWS_ACCESS_KEY_ID=your-aws-access-key
 AWS_SECRET_ACCESS_KEY=your-aws-secret-key
 ```
+
+### Docker Authentication
+
+The service now uses environment variables for Docker registry authentication:
+- `DOCKER_USERNAME`: Your Docker registry username
+- `DOCKER_PASSWORD`: Your Docker registry password or access token (recommended)
+
+This eliminates the need to run `docker login` manually before starting the service. The authentication is handled automatically when pushing images to the registry.
 
 ## Usage
 
@@ -58,14 +67,6 @@ webhook = client.create_webhook(
     ],
     secret="your-webhook-secret",
 )
-```
-
-### Docker Login
-
-If your using a private registry (Docker.io/ Gitlab/ etc), Make sure you're logged into your Docker registry:
-
-```bash
-docker login
 ```
 
 ## How It Works

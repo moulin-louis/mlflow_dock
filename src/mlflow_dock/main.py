@@ -73,6 +73,7 @@ async def handle_webhook(
                 version=version,
                 docker_registry=settings.docker_registry,
                 docker_username=settings.docker_username,
+                docker_password=settings.docker_password,
             )
         )
         logger.info(f"Queued Docker build and push for {model_name}:{version}")

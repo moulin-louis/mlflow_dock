@@ -52,8 +52,13 @@ class TestPushDockerImage:
             {"status": "Pushed"},
         ]
 
-        _push_docker_image("registry/user/test:1")
+        _push_docker_image(
+            "registry/user/test:1", "registry", "user", "password"
+        )
 
+        mock_client.login.assert_called_once_with(
+            username="user", password="password", registry="registry"
+        )
         mock_client.images.push.assert_called_once_with(
             "registry/user/test:1", stream=True, decode=True
         )
@@ -69,7 +74,9 @@ class TestPushDockerImage:
         ]
 
         with pytest.raises(DockerPushError) as exc_info:
-            _push_docker_image("registry/user/test:1")
+            _push_docker_image(
+                "registry/user/test:1", "registry", "user", "password"
+            )
 
         assert "Access denied" in str(exc_info.value)
 
@@ -86,9 +93,12 @@ class TestPushDockerImage:
         ]
 
         # This should succeed after retry
-        _push_docker_image("registry/user/test:1")
+        _push_docker_image(
+            "registry/user/test:1", "registry", "user", "password"
+        )
 
         assert mock_client.images.push.call_count == 2
+        assert mock_client.login.call_count == 2
 
     @patch("mlflow_dock.docker_service.docker")
     def test_max_retries_exceeded(self, mock_docker):
@@ -98,10 +108,27 @@ class TestPushDockerImage:
         mock_client.images.push.side_effect = docker.errors.APIError("Always fails")
 
         with pytest.raises(docker.errors.APIError):
-            _push_docker_image("registry/user/test:1")
+            _push_docker_image(
+                "registry/user/test:1", "registry", "user", "password"
+            )
 
         # Should have attempted 3 times (initial + 2 retries)
         assert mock_client.images.push.call_count == 3
+
+    @patch("mlflow_dock.docker_service.docker")
+    def test_authentication_failure(self, mock_docker):
+        """Authentication failure should raise DockerPushError."""
+        mock_client = MagicMock()
+        mock_docker.from_env.return_value = mock_client
+        mock_client.login.side_effect = docker.errors.APIError("Invalid credentials")
+
+        with pytest.raises(DockerPushError) as exc_info:
+            _push_docker_image(
+                "registry/user/test:1", "registry", "user", "wrong_password"
+            )
+
+        assert "Authentication failed" in str(exc_info.value)
+        mock_client.images.push.assert_not_called()
 
 
 class TestBuildAndPushDocker:
@@ -119,10 +146,13 @@ class TestBuildAndPushDocker:
             version="1",
             docker_registry="registry.io",
             docker_username="user",
+            docker_password="password",
         )
 
         mock_build.assert_called_once_with("models:/test/1", "registry.io/user/test:1")
-        mock_push.assert_called_once_with("registry.io/user/test:1")
+        mock_push.assert_called_once_with(
+            "registry.io/user/test:1", "registry.io", "user", "password"
+        )
 
     @patch("mlflow_dock.docker_service._push_docker_image")
     @patch("mlflow_dock.docker_service._build_docker_image")
@@ -137,6 +167,7 @@ class TestBuildAndPushDocker:
                 version="1",
                 docker_registry="registry.io",
                 docker_username="user",
+                docker_password="password",
             )
 
         mock_push.assert_not_called()
@@ -151,8 +182,9 @@ class TestBuildAndPushDocker:
             version="5",
             docker_registry="ghcr.io",
             docker_username="myorg",
+            docker_password="token123",
         )
 
         expected_image = "ghcr.io/myorg/my-model:5"
         mock_build.assert_called_once_with("models:/my-model/5", expected_image)
-        mock_push.assert_called_once_with(expected_image)
+        mock_push.assert_called_once_with(expected_image, "ghcr.io", "myorg", "token123")

@@ -22,6 +22,7 @@ def test_settings(test_secret, monkeypatch):
     monkeypatch.setenv("WEBHOOK_SECRET", test_secret)
     monkeypatch.setenv("DOCKER_REGISTRY", "test-registry.io")
     monkeypatch.setenv("DOCKER_USERNAME", "testuser")
+    monkeypatch.setenv("DOCKER_PASSWORD", "testpassword")
     monkeypatch.setenv("MAX_TIMESTAMP_AGE", "300")
     monkeypatch.setenv("PORT", "8000")
 
