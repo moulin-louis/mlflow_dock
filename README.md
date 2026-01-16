@@ -23,6 +23,7 @@ DOCKER_USERNAME=your-docker-username
 
 # Optional
 DOCKER_REGISTRY=docker.io
+DOCKER_PASSWORD=your-docker-password-or-token
 MAX_TIMESTAMP_AGE=300
 PORT=8000
 
@@ -60,13 +61,29 @@ webhook = client.create_webhook(
 )
 ```
 
-### Docker Login
+### Docker Authentication
 
-If your using a private registry (Docker.io/ Gitlab/ etc), Make sure you're logged into your Docker registry:
+You have two options for Docker registry authentication:
+
+#### Option 1: Environment Variable (Recommended for automation)
+
+Set the `DOCKER_PASSWORD` environment variable with your Docker password or access token:
+
+```bash
+DOCKER_PASSWORD=your-docker-password-or-token
+```
+
+The service will automatically authenticate with the registry before pushing images.
+
+#### Option 2: Manual Docker Login
+
+If you prefer not to use the `DOCKER_PASSWORD` environment variable, make sure you're logged into your Docker registry:
 
 ```bash
 docker login
 ```
+
+This option is suitable for development environments but not recommended for production or automated deployments.
 
 ## How It Works
 

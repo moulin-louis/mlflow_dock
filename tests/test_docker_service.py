@@ -4,8 +4,10 @@ import docker.errors
 import pytest
 
 from mlflow_dock.docker_service import (
+    DockerAuthError,
     DockerBuildError,
     DockerPushError,
+    _authenticate_docker,
     _build_docker_image,
     _push_docker_image,
     build_and_push_docker,
@@ -39,6 +41,38 @@ class TestBuildDockerImage:
         assert "Build failed" in str(exc_info.value)
 
 
+class TestAuthenticateDocker:
+    """Tests for Docker authentication."""
+
+    def test_successful_authentication(self):
+        """Successful authentication should complete without error."""
+        mock_client = MagicMock()
+        mock_client.login.return_value = {"Status": "Login Succeeded"}
+
+        _authenticate_docker(
+            mock_client, "registry.io", "testuser", "testpassword"
+        )
+
+        mock_client.login.assert_called_once_with(
+            username="testuser", password="testpassword", registry="registry.io"
+        )
+
+    def test_authentication_failure(self):
+        """Failed authentication should raise DockerAuthError."""
+        mock_client = MagicMock()
+        # Create a proper Docker APIError
+        api_error = docker.errors.APIError("Invalid credentials")
+        mock_client.login.side_effect = api_error
+
+        with pytest.raises(DockerAuthError) as exc_info:
+            _authenticate_docker(
+                mock_client, "registry.io", "testuser", "wrongpassword"
+            )
+
+        assert "Invalid credentials" in str(exc_info.value)
+        assert "registry.io" in str(exc_info.value)
+
+
 class TestPushDockerImage:
     """Tests for Docker image pushing with retry logic."""
 
@@ -57,6 +91,45 @@ class TestPushDockerImage:
         mock_client.images.push.assert_called_once_with(
             "registry/user/test:1", stream=True, decode=True
         )
+
+    @patch("mlflow_dock.docker_service._authenticate_docker")
+    @patch("mlflow_dock.docker_service.docker")
+    def test_push_with_authentication(self, mock_docker, mock_auth):
+        """Push with credentials should authenticate first."""
+        mock_client = MagicMock()
+        mock_docker.from_env.return_value = mock_client
+        mock_client.images.push.return_value = [
+            {"status": "Pushing"},
+            {"status": "Pushed"},
+        ]
+
+        _push_docker_image(
+            "registry/user/test:1",
+            registry="registry.io",
+            username="testuser",
+            password="testpassword",
+        )
+
+        mock_auth.assert_called_once_with(
+            mock_client, "registry.io", "testuser", "testpassword"
+        )
+        mock_client.images.push.assert_called_once()
+
+    @patch("mlflow_dock.docker_service._authenticate_docker")
+    @patch("mlflow_dock.docker_service.docker")
+    def test_push_without_authentication(self, mock_docker, mock_auth):
+        """Push without credentials should not authenticate."""
+        mock_client = MagicMock()
+        mock_docker.from_env.return_value = mock_client
+        mock_client.images.push.return_value = [
+            {"status": "Pushing"},
+            {"status": "Pushed"},
+        ]
+
+        _push_docker_image("registry/user/test:1")
+
+        mock_auth.assert_not_called()
+        mock_client.images.push.assert_called_once()
 
     @patch("mlflow_dock.docker_service.docker")
     def test_push_error_in_response(self, mock_docker):
@@ -122,7 +195,7 @@ class TestBuildAndPushDocker:
         )
 
         mock_build.assert_called_once_with("models:/test/1", "registry.io/user/test:1")
-        mock_push.assert_called_once_with("registry.io/user/test:1")
+        mock_push.assert_called_once_with("registry.io/user/test:1", "registry.io", "user", None)
 
     @patch("mlflow_dock.docker_service._push_docker_image")
     @patch("mlflow_dock.docker_service._build_docker_image")
@@ -155,4 +228,24 @@ class TestBuildAndPushDocker:
 
         expected_image = "ghcr.io/myorg/my-model:5"
         mock_build.assert_called_once_with("models:/my-model/5", expected_image)
-        mock_push.assert_called_once_with(expected_image)
+        mock_push.assert_called_once_with(expected_image, "ghcr.io", "myorg", None)
+
+    @patch("mlflow_dock.docker_service._push_docker_image")
+    @patch("mlflow_dock.docker_service._build_docker_image")
+    def test_workflow_with_authentication(self, mock_build, mock_push):
+        """Workflow with password should pass credentials to push."""
+        mock_build.return_value = "build-result"
+
+        build_and_push_docker(
+            model_uri="models:/test/1",
+            model_name="test",
+            version="1",
+            docker_registry="registry.io",
+            docker_username="user",
+            docker_password="secure-password",
+        )
+
+        mock_build.assert_called_once_with("models:/test/1", "registry.io/user/test:1")
+        mock_push.assert_called_once_with(
+            "registry.io/user/test:1", "registry.io", "user", "secure-password"
+        )
