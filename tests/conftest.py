@@ -2,12 +2,19 @@ import base64
 import hashlib
 import hmac
 import json
+import os
 import time
 
 import pytest
 from fastapi.testclient import TestClient
 
-from mlflow_dock.config import Settings, reset_settings
+# Set test env vars before importing app
+os.environ.setdefault("MLFLOW_WEBHOOK_SECRET", "test-webhook-secret-key")
+os.environ.setdefault("DOCKER_REGISTRY", "test-registry.io")
+os.environ.setdefault("DOCKER_USERNAME", "testuser")
+os.environ.setdefault("DOCKER_REGISTRY_PASSWORD", "testpassword")
+os.environ.setdefault("MAX_TIMESTAMP_AGE", "300")
+os.environ.setdefault("PORT", "8000")
 
 
 @pytest.fixture
@@ -17,28 +24,10 @@ def test_secret():
 
 
 @pytest.fixture
-def test_settings(test_secret, monkeypatch):
-    """Configure test environment variables and return settings."""
-    monkeypatch.setenv("WEBHOOK_SECRET", test_secret)
-    monkeypatch.setenv("DOCKER_REGISTRY", "test-registry.io")
-    monkeypatch.setenv("DOCKER_USERNAME", "testuser")
-    monkeypatch.setenv("MAX_TIMESTAMP_AGE", "300")
-    monkeypatch.setenv("PORT", "8000")
-
-    # Reset settings to pick up new env vars
-    reset_settings()
-
-    yield Settings.from_env()
-
-    # Reset after test
-    reset_settings()
-
-
-@pytest.fixture
-def client(test_settings):
-    """Create FastAPI test client with test settings."""
+def client():
     from mlflow_dock.main import app
 
+    """Create FastAPI test client."""
     return TestClient(app)
 
 
@@ -52,21 +41,9 @@ def valid_webhook_payload():
             "name": "test-model",
             "source": "models:/test-model/1",
             "version": "1",
-        },
-    }
-
-
-@pytest.fixture
-def tag_webhook_payload():
-    """Sample webhook payload for model_version_tag.set event."""
-    return {
-        "entity": "model_version_tag",
-        "action": "set",
-        "data": {
-            "name": "test-model",
-            "version": "1",
-            "key": "alias",
-            "value": "production",
+            "run_id": None,
+            "tags": {},
+            "description": None,
         },
     }
 

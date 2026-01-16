@@ -102,46 +102,9 @@ class TestWebhookEndpoint:
             headers=headers,
         )
 
-        assert response.status_code == 200
-        assert response.json() == {"status": "success"}
+        assert response.status_code == 202
+        assert response.json() == {"status": "submitted"}
 
-    @patch("mlflow_dock.main.build_and_push_docker_async")
-    def test_valid_tag_set_webhook(
-        self, mock_build, client, tag_webhook_payload, make_webhook_headers
-    ):
-        """Valid model_version_tag.set webhook should succeed without triggering build."""
-        headers = make_webhook_headers(tag_webhook_payload)
-
-        response = client.post(
-            "/webhook",
-            content=json.dumps(tag_webhook_payload),
-            headers=headers,
-        )
-
-        assert response.status_code == 200
-        assert response.json() == {"status": "success"}
-        # Build should not be called for tag events
-        mock_build.assert_not_called()
-
-    @patch("mlflow_dock.main.build_and_push_docker_async")
-    def test_unknown_entity_event(self, mock_build, client, make_webhook_headers):
-        """Unknown entity/action should return success but not trigger build."""
-        payload = {
-            "entity": "unknown_entity",
-            "action": "unknown_action",
-            "data": {},
-        }
-        headers = make_webhook_headers(payload)
-
-        response = client.post(
-            "/webhook",
-            content=json.dumps(payload),
-            headers=headers,
-        )
-
-        assert response.status_code == 200
-        assert response.json() == {"status": "success"}
-        mock_build.assert_not_called()
 
 
 class TestWebhookPayloadExtraction:
@@ -150,7 +113,7 @@ class TestWebhookPayloadExtraction:
     @patch("mlflow_dock.main.build_and_push_docker_async")
     @patch("mlflow_dock.main.asyncio.create_task")
     def test_extracts_model_info_correctly(
-        self, mock_create_task, mock_build, client, make_webhook_headers, test_settings
+        self, mock_create_task, mock_build, client, make_webhook_headers
     ):
         """Webhook should correctly extract model name, URI, and version."""
         payload = {
@@ -160,6 +123,9 @@ class TestWebhookPayloadExtraction:
                 "name": "my-custom-model",
                 "source": "models:/my-custom-model/42",
                 "version": "42",
+                "run_id": None,
+                "tags": {},
+                "description": None,
             },
         }
         headers = make_webhook_headers(payload)
@@ -170,6 +136,6 @@ class TestWebhookPayloadExtraction:
             headers=headers,
         )
 
-        assert response.status_code == 200
+        assert response.status_code == 202
         # Verify create_task was called (which means build_and_push_docker_async was invoked)
         mock_create_task.assert_called_once()

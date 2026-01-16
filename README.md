@@ -18,8 +18,9 @@ Create a `.env` file with the following required variables:
 
 ```bash
 # Required
-WEBHOOK_SECRET=your-webhook-secret-here
+MLFLOW_WEBHOOK_SECRET=your-webhook-secret-here
 DOCKER_USERNAME=your-docker-username
+DOCKER_REGISTRY_PASSWORD=your-registry-password
 
 # Optional
 DOCKER_REGISTRY=docker.io
@@ -60,12 +61,13 @@ webhook = client.create_webhook(
 )
 ```
 
-### Docker Login
+### Registry Authentication
 
-If your using a private registry (Docker.io/ Gitlab/ etc), Make sure you're logged into your Docker registry:
+Set `DOCKER_REGISTRY_PASSWORD` in your `.env` file or container environment:
 
 ```bash
-docker login
+DOCKER_USERNAME=your-username
+DOCKER_REGISTRY_PASSWORD=your-password-or-token
 ```
 
 ## How It Works

@@ -59,6 +59,36 @@ class TestPushDockerImage:
         )
 
     @patch("mlflow_dock.docker_service.docker")
+    def test_push_with_auth_config(self, mock_docker):
+        """Push with auth_config should pass credentials to docker client."""
+        mock_client = MagicMock()
+        mock_docker.from_env.return_value = mock_client
+        mock_client.images.push.return_value = [{"status": "Pushed"}]
+
+        auth_config = {"username": "testuser", "password": "testpass"}
+        _push_docker_image("registry/user/test:1", auth_config=auth_config)
+
+        mock_client.images.push.assert_called_once_with(
+            "registry/user/test:1",
+            stream=True,
+            decode=True,
+            auth_config=auth_config,
+        )
+
+    @patch("mlflow_dock.docker_service.docker")
+    def test_push_without_auth_config(self, mock_docker):
+        """Push without auth_config should not include auth in request."""
+        mock_client = MagicMock()
+        mock_docker.from_env.return_value = mock_client
+        mock_client.images.push.return_value = [{"status": "Pushed"}]
+
+        _push_docker_image("registry/user/test:1", auth_config=None)
+
+        mock_client.images.push.assert_called_once_with(
+            "registry/user/test:1", stream=True, decode=True
+        )
+
+    @patch("mlflow_dock.docker_service.docker")
     def test_push_error_in_response(self, mock_docker):
         """Push error in response should raise DockerPushError."""
         mock_client = MagicMock()
@@ -119,10 +149,14 @@ class TestBuildAndPushDocker:
             version="1",
             docker_registry="registry.io",
             docker_username="user",
+            docker_registry_password="secret",
         )
 
-        mock_build.assert_called_once_with("models:/test/1", "registry.io/user/test:1")
-        mock_push.assert_called_once_with("registry.io/user/test:1")
+        mock_build.assert_called_once_with("models:/test/1", "registry.io/test:1")
+        mock_push.assert_called_once_with(
+            "registry.io/test:1",
+            auth_config={"username": "user", "password": "secret"},
+        )
 
     @patch("mlflow_dock.docker_service._push_docker_image")
     @patch("mlflow_dock.docker_service._build_docker_image")
@@ -137,6 +171,7 @@ class TestBuildAndPushDocker:
                 version="1",
                 docker_registry="registry.io",
                 docker_username="user",
+                docker_registry_password="secret",
             )
 
         mock_push.assert_not_called()
@@ -151,8 +186,30 @@ class TestBuildAndPushDocker:
             version="5",
             docker_registry="ghcr.io",
             docker_username="myorg",
+            docker_registry_password="secret",
         )
 
-        expected_image = "ghcr.io/myorg/my-model:5"
+        expected_image = "ghcr.io/my-model:5"
         mock_build.assert_called_once_with("models:/my-model/5", expected_image)
-        mock_push.assert_called_once_with(expected_image)
+        mock_push.assert_called_once_with(
+            expected_image,
+            auth_config={"username": "myorg", "password": "secret"},
+        )
+
+    @patch("mlflow_dock.docker_service._push_docker_image")
+    @patch("mlflow_dock.docker_service._build_docker_image")
+    def test_workflow_with_registry_password(self, mock_build, mock_push):
+        """Workflow with registry password should pass auth config to push."""
+        build_and_push_docker(
+            model_uri="models:/test/1",
+            model_name="test",
+            version="1",
+            docker_registry="registry.io",
+            docker_username="user",
+            docker_registry_password="secret123",
+        )
+
+        mock_push.assert_called_once_with(
+            "registry.io/test:1",
+            auth_config={"username": "user", "password": "secret123"},
+        )
