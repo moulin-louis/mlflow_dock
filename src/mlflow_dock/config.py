@@ -15,6 +15,18 @@ class Settings:
     max_timestamp_age: int
     port: int
 
+    def __repr__(self) -> str:
+        """Custom repr that masks sensitive information."""
+        return (
+            f"Settings("
+            f"webhook_secret='***', "
+            f"docker_registry='{self.docker_registry}', "
+            f"docker_username='{self.docker_username}', "
+            f"docker_password='***', "
+            f"max_timestamp_age={self.max_timestamp_age}, "
+            f"port={self.port})"
+        )
+
     @classmethod
     def from_env(cls) -> "Settings":
         """Load settings from environment variables.
