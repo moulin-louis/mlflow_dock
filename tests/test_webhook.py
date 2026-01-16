@@ -106,7 +106,6 @@ class TestWebhookEndpoint:
         assert response.json() == {"status": "submitted"}
 
 
-
 class TestWebhookPayloadExtraction:
     """Tests for webhook payload data extraction."""
 
