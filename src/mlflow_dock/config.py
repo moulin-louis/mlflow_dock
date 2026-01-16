@@ -27,6 +27,10 @@ class Settings:
             f"port={self.port})"
         )
 
+    def __str__(self) -> str:
+        """Custom str that masks sensitive information."""
+        return self.__repr__()
+
     @classmethod
     def from_env(cls) -> "Settings":
         """Load settings from environment variables.
