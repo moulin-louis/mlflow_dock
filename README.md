@@ -12,25 +12,6 @@ A FastAPI-based webhook receiver for MLflow that automatically builds and pushes
 - Python 3.12 or higher
 - Docker installed and running
 
-## Installation
-
-1. Clone the repository:
-```bash
-git clone https://github.com/moulin-louis/mlflow_dock.git
-cd mlflow_dock
-```
-
-2. Install dependencies using uv (recommended):
-```bash
-uv sync
-```
-
-3. Configure environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your actual values
-```
-
 ## Configuration
 
 Create a `.env` file with the following required variables:
