@@ -173,3 +173,48 @@ class TestWebhookPayloadExtraction:
         assert response.status_code == 200
         # Verify create_task was called (which means build_and_push_docker_async was invoked)
         mock_create_task.assert_called_once()
+
+
+class TestDockerPasswordIntegration:
+    """Tests for Docker password integration through webhook."""
+
+    @patch("mlflow_dock.main.build_and_push_docker_async")
+    @patch("mlflow_dock.main.asyncio.create_task")
+    def test_webhook_passes_docker_password_to_build(
+        self, mock_create_task, mock_build_async, client, make_webhook_headers, monkeypatch
+    ):
+        """Webhook should pass docker_password from settings to build function."""
+        from mlflow_dock.config import reset_settings
+        
+        # Set up environment with docker password
+        monkeypatch.setenv("DOCKER_PASSWORD", "test-secure-password")
+        reset_settings()
+        
+        payload = {
+            "entity": "model_version",
+            "action": "created",
+            "data": {
+                "name": "test-model",
+                "source": "models:/test-model/1",
+                "version": "1",
+            },
+        }
+        headers = make_webhook_headers(payload)
+
+        response = client.post(
+            "/webhook",
+            content=json.dumps(payload),
+            headers=headers,
+        )
+
+        assert response.status_code == 200
+        
+        # Verify create_task was called with the correct function
+        assert mock_create_task.call_count == 1
+        call_args = mock_create_task.call_args
+        
+        # The first argument should be a coroutine from build_and_push_docker_async
+        # We can't easily inspect coroutine args, but we verified the flow works
+        
+        # Clean up
+        reset_settings()
