@@ -1,6 +1,6 @@
 [project]
 name = "mlflow_dock"
-version = "0.2.0"
+version = "0.3.0"
 description = "MLflow webhook receiver that automatically builds and pushes Docker images when new model versions are created"
 requires-python = ">=3.12"
 readme = "README.md"
