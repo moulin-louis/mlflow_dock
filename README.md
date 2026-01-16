@@ -43,7 +43,7 @@ The server will start on `http://0.0.0.0:8000` (or the port specified in your `.
 
 ### Setting Up MLflow Webhook
 
-**Manually register** using the MLflow Python client:
+Register using the MLflow Python client:
 
 ```python
 from mlflow import MlflowClient
