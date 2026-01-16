@@ -6,7 +6,7 @@ requires-python = ">=3.12"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
-    {name = "Louis MOULIN", email = "moulin.louis@protonmail.com"}
+    {name = "Louis MOULIN", email = "louis.moulin@outlook.fr"}
 ]
 keywords = ["mlflow", "docker", "webhook", "machine-learning", "mlops"]
 classifiers = [
@@ -28,17 +28,6 @@ dependencies = [
     "uvicorn>=0.40.0",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "pytest>=8.0",
-    "pytest-asyncio>=0.24",
-    "pytest-cov>=6.0",
-    "httpx>=0.28",
-]
-
-[project.scripts]
-mlflow_dock = "mlflow_dock.main:main"
-
 [build-system]
 requires = ["uv_build>=0.9.22,<0.10.0"]
 build-backend = "uv_build"
@@ -48,3 +37,11 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 addopts = "-v --tb=short"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
+    "httpx>=0.28",
+]
