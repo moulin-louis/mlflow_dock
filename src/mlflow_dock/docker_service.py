@@ -137,9 +137,35 @@ def build_and_push_docker(
     """
     image_name = f"{docker_registry}/{model_name}:{version}"
     auth_config = {"username": docker_username, "password": docker_registry_password}
+    log_path = _get_build_log_path(model_name, version)
 
-    _build_docker_image(model_uri, image_name, model_name, version)
-    _push_docker_image(image_name, auth_config=auth_config)
+    # Save original file descriptors
+    stdout_fd = sys.stdout.fileno()
+    stderr_fd = sys.stderr.fileno()
+    saved_stdout_fd = os.dup(stdout_fd)
+    saved_stderr_fd = os.dup(stderr_fd)
+
+    try:
+        with open(log_path, "w") as log_file:
+            # Redirect stdout and stderr to log file at fd level
+            os.dup2(log_file.fileno(), stdout_fd)
+            os.dup2(log_file.fileno(), stderr_fd)
+
+            try:
+                _build_docker_image(model_uri, image_name)
+                _push_docker_image(image_name, auth_config=auth_config)
+            finally:
+                # Restore original file descriptors
+                os.dup2(saved_stdout_fd, stdout_fd)
+                os.dup2(saved_stderr_fd, stderr_fd)
+    except Exception as e:
+        # Append error to log file
+        with open(log_path, "a") as log_file:
+            log_file.write(f"\n\nFAILED: {e}\n")
+        raise
+    finally:
+        os.close(saved_stdout_fd)
+        os.close(saved_stderr_fd)
 
 
 async def build_and_push_docker_async(
