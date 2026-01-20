@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import sys
+from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
 from pathlib import Path
 
@@ -180,7 +181,7 @@ async def build_and_push_docker_async(
     docker_username: str,
     docker_registry_password: str,
 ) -> None:
-    """Async wrapper that runs the blocking build/push in a thread pool.
+    """Async wrapper that runs the blocking build/push in a subprocess.
 
     Args:
         model_uri: MLflow model URI
@@ -190,10 +191,11 @@ async def build_and_push_docker_async(
         docker_username: Docker registry username
         docker_registry_password: Registry password for authentication
     """
-    image_name = f"{docker_registry}/{model_name}:{version}"
+    loop = asyncio.get_running_loop()
 
-    try:
-        await asyncio.to_thread(
+    with ProcessPoolExecutor(max_workers=1) as executor:
+        await loop.run_in_executor(
+            executor,
             build_and_push_docker,
             model_uri,
             model_name,
@@ -202,5 +204,3 @@ async def build_and_push_docker_async(
             docker_username,
             docker_registry_password,
         )
-    except Exception as e:
-        logger.error(f"Build and push failed for {image_name}: {e}")
