@@ -1,8 +1,8 @@
 import asyncio
 import logging
+import os
 import sys
 from datetime import datetime
-from io import StringIO
 from pathlib import Path
 
 import docker
@@ -68,36 +68,39 @@ def _build_docker_image(
         DockerBuildError: If build fails
     """
     log_path = _get_build_log_path(model_name, version)
-    logger.info(f"Starting Docker build for {image_name}, logs at {log_path}")
 
-    captured_output = StringIO()
-    original_stdout = sys.stdout
-    original_stderr = sys.stderr
+    # Save original file descriptors
+    stdout_fd = sys.stdout.fileno()
+    stderr_fd = sys.stderr.fileno()
+    saved_stdout_fd = os.dup(stdout_fd)
+    saved_stderr_fd = os.dup(stderr_fd)
 
     try:
-        sys.stdout = captured_output
-        sys.stderr = captured_output
+        with open(log_path, "w") as log_file:
+            # Redirect stdout and stderr to log file at fd level
+            os.dup2(log_file.fileno(), stdout_fd)
+            os.dup2(log_file.fileno(), stderr_fd)
 
-        result = mlflow.models.build_docker(
-            model_uri=model_uri,
-            name=image_name,
-        )
+            try:
+                result = mlflow.models.build_docker(
+                    model_uri=model_uri,
+                    name=image_name,
+                )
+            finally:
+                # Restore original file descriptors
+                os.dup2(saved_stdout_fd, stdout_fd)
+                os.dup2(saved_stderr_fd, stderr_fd)
 
-        sys.stdout = original_stdout
-        sys.stderr = original_stderr
-
-        log_path.write_text(captured_output.getvalue())
-        logger.info(f"Docker build complete: {result}")
         return result
     except Exception as e:
-        sys.stdout = original_stdout
-        sys.stderr = original_stderr
+        # Append error to log file
+        with open(log_path, "a") as log_file:
+            log_file.write(f"\n\nBUILD FAILED: {e}\n")
 
-        captured_output.write(f"\n\nBUILD FAILED: {e}\n")
-        log_path.write_text(captured_output.getvalue())
-
-        logger.error(f"Docker build failed: {e}")
         raise DockerBuildError(f"Failed to build image {image_name}: {e}") from e
+    finally:
+        os.close(saved_stdout_fd)
+        os.close(saved_stderr_fd)
 
 
 @retry(
