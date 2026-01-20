@@ -40,9 +40,7 @@ class TestBuildDockerImage:
         mock_log_path.return_value = tmp_path / "test.log"
 
         with pytest.raises(DockerBuildError) as exc_info:
-            _build_docker_image(
-                "models:/test/1", "registry/user/test:1", "test", "1"
-            )
+            _build_docker_image("models:/test/1", "registry/user/test:1", "test", "1")
 
         assert "Build failed" in str(exc_info.value)
 
