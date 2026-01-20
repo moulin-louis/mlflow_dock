@@ -15,16 +15,12 @@ from mlflow_dock.docker_service import (
 class TestBuildDockerImage:
     """Tests for Docker image building."""
 
-    @patch("mlflow_dock.docker_service._get_build_log_path")
     @patch("mlflow_dock.docker_service.mlflow")
-    def test_successful_build(self, mock_mlflow, mock_log_path, tmp_path):
+    def test_successful_build(self, mock_mlflow):
         """Successful build should return result."""
         mock_mlflow.models.build_docker.return_value = "build-result"
-        mock_log_path.return_value = tmp_path / "test.log"
 
-        result = _build_docker_image(
-            "models:/test/1", "registry/user/test:1", "test", "1"
-        )
+        result = _build_docker_image("models:/test/1", "registry/user/test:1")
 
         assert result == "build-result"
         mock_mlflow.models.build_docker.assert_called_once_with(
@@ -32,15 +28,13 @@ class TestBuildDockerImage:
             name="registry/user/test:1",
         )
 
-    @patch("mlflow_dock.docker_service._get_build_log_path")
     @patch("mlflow_dock.docker_service.mlflow")
-    def test_build_failure_raises_error(self, mock_mlflow, mock_log_path, tmp_path):
+    def test_build_failure_raises_error(self, mock_mlflow):
         """Build failure should raise DockerBuildError."""
         mock_mlflow.models.build_docker.side_effect = Exception("Build failed")
-        mock_log_path.return_value = tmp_path / "test.log"
 
         with pytest.raises(DockerBuildError) as exc_info:
-            _build_docker_image("models:/test/1", "registry/user/test:1", "test", "1")
+            _build_docker_image("models:/test/1", "registry/user/test:1")
 
         assert "Build failed" in str(exc_info.value)
 
