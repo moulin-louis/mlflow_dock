@@ -1,5 +1,9 @@
 import asyncio
 import logging
+import sys
+from datetime import datetime
+from io import StringIO
+from pathlib import Path
 
 import docker
 import docker.errors
@@ -14,6 +18,25 @@ from tenacity import (
 
 logger = logging.getLogger(__name__)
 
+BUILD_LOG_DIR = Path("/var/log/mlflow-dock")
+
+
+def _get_build_log_path(model_name: str, version: str) -> Path:
+    """Generate a log file path for a specific build.
+
+    Args:
+        model_name: Name of the model being built
+        version: Version or alias of the model
+
+    Returns:
+        Path to the log file
+    """
+    BUILD_LOG_DIR.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    safe_model_name = model_name.replace("/", "_").replace(":", "_")
+    safe_version = version.replace("/", "_").replace(":", "_")
+    return BUILD_LOG_DIR / f"{safe_model_name}_{safe_version}_{timestamp}.log"
+
 
 class DockerBuildError(Exception):
     """Raised when Docker image build fails."""
@@ -27,12 +50,16 @@ class DockerPushError(Exception):
     pass
 
 
-def _build_docker_image(model_uri: str, image_name: str) -> str:
+def _build_docker_image(
+    model_uri: str, image_name: str, model_name: str, version: str
+) -> str:
     """Build Docker image using MLflow.
 
     Args:
         model_uri: MLflow model URI (e.g., "models:/model_name/1")
         image_name: Full image name including registry and tag
+        model_name: Name of the model (for log file naming)
+        version: Version of the model (for log file naming)
 
     Returns:
         Build result from MLflow
@@ -40,15 +67,35 @@ def _build_docker_image(model_uri: str, image_name: str) -> str:
     Raises:
         DockerBuildError: If build fails
     """
+    log_path = _get_build_log_path(model_name, version)
+    logger.info(f"Starting Docker build for {image_name}, logs at {log_path}")
+
+    captured_output = StringIO()
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+
     try:
-        logger.info(f"Starting Docker build for {image_name}")
+        sys.stdout = captured_output
+        sys.stderr = captured_output
+
         result = mlflow.models.build_docker(
             model_uri=model_uri,
             name=image_name,
         )
+
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
+
+        log_path.write_text(captured_output.getvalue())
         logger.info(f"Docker build complete: {result}")
         return result
     except Exception as e:
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
+
+        captured_output.write(f"\n\nBUILD FAILED: {e}\n")
+        log_path.write_text(captured_output.getvalue())
+
         logger.error(f"Docker build failed: {e}")
         raise DockerBuildError(f"Failed to build image {image_name}: {e}") from e
 
@@ -118,7 +165,7 @@ def build_and_push_docker(
     image_name = f"{docker_registry}/{model_name}:{version}"
     auth_config = {"username": docker_username, "password": docker_registry_password}
 
-    _build_docker_image(model_uri, image_name)
+    _build_docker_image(model_uri, image_name, model_name, version)
     _push_docker_image(image_name, auth_config=auth_config)
 
 

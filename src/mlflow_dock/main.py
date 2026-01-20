@@ -1,9 +1,7 @@
 import asyncio
 import logging
-import os
 from typing import Literal
 
-import mlflow
 from fastapi import FastAPI, Header, HTTPException, Request
 from mlflow.webhooks.types import (
     ModelVersionAliasCreatedPayload,
@@ -22,11 +20,6 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-
-mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
-
-exp = mlflow.search_experiments()
-print(f"found {len(exp)}")
 
 
 class ModelVersionCreatedEvent(BaseModel):
