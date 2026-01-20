@@ -140,7 +140,7 @@ async def build_and_push_docker_async(
         docker_username: Docker registry username
         docker_registry_password: Registry password for authentication
     """
-    image_name = f"{docker_registry}/{docker_username}/{model_name}:{version}"
+    image_name = f"{docker_registry}/{model_name}:{version}"
 
     try:
         await asyncio.to_thread(
