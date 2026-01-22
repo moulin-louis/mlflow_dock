@@ -140,7 +140,9 @@ class TestBuildAndPushDocker:
     @patch("mlflow_dock.docker_service._get_build_log_path")
     @patch("mlflow_dock.docker_service._push_docker_image")
     @patch("mlflow_dock.docker_service._build_docker_image")
-    def test_full_workflow_success(self, mock_build, mock_push, mock_log_path, tmp_path):
+    def test_full_workflow_success(
+        self, mock_build, mock_push, mock_log_path, tmp_path
+    ):
         """Full workflow should build then push."""
         mock_build.return_value = "build-result"
         mock_log_path.return_value = tmp_path / "test.log"
@@ -163,7 +165,9 @@ class TestBuildAndPushDocker:
     @patch("mlflow_dock.docker_service._get_build_log_path")
     @patch("mlflow_dock.docker_service._push_docker_image")
     @patch("mlflow_dock.docker_service._build_docker_image")
-    def test_build_failure_skips_push(self, mock_build, mock_push, mock_log_path, tmp_path):
+    def test_build_failure_skips_push(
+        self, mock_build, mock_push, mock_log_path, tmp_path
+    ):
         """Build failure should prevent push."""
         mock_build.side_effect = DockerBuildError("Build failed")
         mock_log_path.return_value = tmp_path / "test.log"
@@ -206,7 +210,9 @@ class TestBuildAndPushDocker:
     @patch("mlflow_dock.docker_service._get_build_log_path")
     @patch("mlflow_dock.docker_service._push_docker_image")
     @patch("mlflow_dock.docker_service._build_docker_image")
-    def test_workflow_with_registry_password(self, mock_build, mock_push, mock_log_path, tmp_path):
+    def test_workflow_with_registry_password(
+        self, mock_build, mock_push, mock_log_path, tmp_path
+    ):
         """Workflow with registry password should pass auth config to push."""
         mock_log_path.return_value = tmp_path / "test.log"
 
