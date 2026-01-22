@@ -20,13 +20,14 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Final stage
 FROM python:3.12-slim
 
-# Install runtime dependencies if needed (e.g., for certain Python packages)
+# Install runtime dependencies and Docker CLI
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
+    docker.io \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a non-root user
-RUN useradd -m -u 1000 mlflow_dock 
+# Create a non-root user and add to docker group
+RUN useradd -m -u 1000 -G docker mlflow_dock 
 
 WORKDIR /app
 
