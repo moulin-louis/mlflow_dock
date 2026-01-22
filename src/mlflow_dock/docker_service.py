@@ -68,6 +68,7 @@ def _build_docker_image(model_uri: str, image_name: str) -> str:
         return mlflow.models.build_docker(
             model_uri=model_uri,
             name=image_name,
+            enable_mlserver=True,
         )
     except Exception as e:
         raise DockerBuildError(f"Failed to build image {image_name}: {e}") from e
