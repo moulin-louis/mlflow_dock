@@ -26,6 +26,7 @@ class TestBuildDockerImage:
         mock_mlflow.models.build_docker.assert_called_once_with(
             model_uri="models:/test/1",
             name="registry/user/test:1",
+            enable_mlserver=True,
         )
 
     @patch("mlflow_dock.docker_service.mlflow")
